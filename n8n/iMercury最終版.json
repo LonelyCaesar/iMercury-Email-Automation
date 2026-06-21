@@ -1,0 +1,322 @@
+{
+  "name": "iMercury最終版(Open AI版)",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -512,
+        16
+      ],
+      "id": "f30116a6-ff64-4534-8f3a-33ea60d10b98",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "nzeXPoUt3L5w41Yv",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        -192
+      ],
+      "id": "ec86efea-a370-4576-8639-485b5f95e86e",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lGlDerVdpijTYypf",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -704,
+        -192
+      ],
+      "id": "a326b788-1cc1-4daf-a0f5-8d7d29f8dbf0",
+      "name": "Get a message1",
+      "webhookId": "97f145ce-5696-437e-a263-8b0723a306a3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lGlDerVdpijTYypf",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Subject:{{ $json.subject }}\n請先判斷的信件內容{{ $json.text }}，並做分類。\n每一種郵件分類都有可能搭配的部門，我會提供部門選項。請判斷該信件要由哪個處室負責。只需要告訴我處室名稱，其餘不要生成任何的答案，編號也不需要給我。\n1. 管理部\n2. 人事部\n3. 資訊部\n4. 行銷部\n5. 營業部\n6. 維修部\n7. 客服部",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -512,
+        -192
+      ],
+      "id": "c73d5fc0-71e1-4e60-a9a8-03670c01e0d0",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_aMQR0ogWGnSXt3MfhFmRPXo5s-Ui_MwyXvIiLxv1BY",
+          "mode": "list",
+          "cachedResultName": "公司各部門信箱",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_aMQR0ogWGnSXt3MfhFmRPXo5s-Ui_MwyXvIiLxv1BY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "工作表1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_aMQR0ogWGnSXt3MfhFmRPXo5s-Ui_MwyXvIiLxv1BY/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "=部門名稱",
+              "lookupValue": "={{ $json.output.replace(/\\d+\\)\\s*\\d+\\.\\s*|\\n/g, '').trim().substring(0) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3fff47ce-82a2-4567-89d4-c989842fca64",
+      "name": "Google Sheets - Get Rows1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [
+        -192,
+        -192
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7WfqKyHZePY6TFh1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "={{ $json.my_final_json.messages[1].text }}",
+        "message": "={{ $json.my_final_json.messages[0].text }}\n{{ $json.my_final_json.messages[2].text }}",
+        "additionalFields": {
+          "toList": []
+        }
+      },
+      "id": "c730be99-20e6-4db1-a8e4-f3547f8e89fa",
+      "name": "Gmail Draft1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -288
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lGlDerVdpijTYypf",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\nimport json as python_json\n\noutput_items = []\n\nfor item in items:\n    try:\n        # 1. 獲取 Gmail 節點資料\n        gmail_node = _('Get a message1').first().json\n        original_subject = gmail_node.get('Subject') or gmail_node.get('subject') or \"無主旨\"\n        \n        # 獲取內容備案：text -> html -> snippet\n        text_content = gmail_node.get('text')\n        html_content = gmail_node.get('html')\n        \n        if text_content and len(text_content.strip()) > 50:\n            original_content = text_content\n        elif html_content:\n            clean_html = re.sub(r'<(style|script)[^>]*>.*?</\\1>', '', html_content, flags=re.DOTALL | re.IGNORECASE)\n            original_content = re.sub('<[^<]+?>', '', clean_html)\n            original_content = original_content.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&quot;', '\"')\n        else:\n            original_content = gmail_node.get('snippet') or \"無內容\"\n\n        # 2. 獲取 Google Sheets 資料\n        dept_name = item.json.get(\"部門名稱\") or \"相關部門\"\n        \n        # 3. 【關鍵：建構您想要的訊息格式】\n        # 我們在這裡就把換行和結構都寫好\n        final_payload = {\n            \"messages\": [\n                {\n                    \"type\": \"text\",\n                    \"text\": f\"Hello, {dept_name}, 您收到一封新郵件。\"\n                },\n                {\n                    \"type\": \"text\",\n                    \"text\": f\"主旨: 【轉寄/iMercury 處理結果】{dept_name} - Re: {original_subject}\"\n                },\n                {\n                    \"type\": \"text\",\n                    \"text\": f\"內文: {original_content.strip()}\"\n                }\n            ]\n        }\n\n        # 4. 輸出\n        output_items.append({\n            \"json\": {\n                \"my_final_json\": final_payload, # 傳出整個物件結構\n                \"to_email\": item.json.get(\"部門信箱\")\n            }\n        })\n\n    except Exception as e:\n        output_items.append({\"json\": {\"error\": str(e)}})\n\nreturn output_items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -192
+      ],
+      "id": "ac62389d-31fb-45a2-8f43-1ff2843cecc2",
+      "name": "Code in Python (Beta)1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code in Python (Beta)1').item.json.to_email }}",
+        "subject": "={{ $('Code in Python (Beta)1').item.json.my_final_json.messages[1].text }}",
+        "message": "={{ $('Code in Python (Beta)1').item.json.my_final_json.messages[0].text }}\n{{ $('Code in Python (Beta)1').item.json.my_final_json.messages[2].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        -288
+      ],
+      "id": "147530e6-521c-4c3d-8876-9d5087d4519b",
+      "name": "Send a message1",
+      "webhookId": "55ae72a9-c3ab-4ec5-9cad-f2183e975555",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lGlDerVdpijTYypf",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/broadcast",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"messages\": [\n    { \"type\": \"text\", \"text\": $json.my_final_json.messages[0].text },\n    { \"type\": \"text\", \"text\": $json.my_final_json.messages[1].text },\n    { \"type\": \"text\", \"text\": $json.my_final_json.messages[2].text }\n  ]\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        -96
+      ],
+      "id": "d66929f0-4d96-4f11-bfd6-5f84a54ee0ba",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8cpn95H3UQ6dSvx6",
+          "name": "Header Auth account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Get Rows1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Get Rows1": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Beta)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Draft1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Beta)1": {
+      "main": [
+        [
+          {
+            "node": "Gmail Draft1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a5cbbbee-0f43-487a-8339-4fffde4738a6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "456c2fa578909b1c392614929028c4a447cc27a00a50d3620781f6abe2882928"
+  },
+  "id": "ENJPzc5eHfZqfRex",
+  "tags": []
+}
