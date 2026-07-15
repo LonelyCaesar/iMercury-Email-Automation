@@ -189,12 +189,7 @@ iMercury-Email-Automation/
 1. 啟動 n8n。
 2. 進入 Workflows。
 3. 選擇 **Import from File**。
-4. 匯入：
-
-```text
-n8n/iMercury最終版.json
-```
-
+4. 匯入：n8n/iMercury最終版.json
 5. 重新設定下列節點的個人憑證：
    - Gmail Trigger
    - Gmail
